@@ -1,0 +1,162 @@
+import string
+from typing import List
+
+from pyscheme.error import (
+    MalformedFloatingPointError,
+    UnterminatedStringLiteralError
+)
+
+from pyscheme.node import (
+	Node,
+    OpenParenthesis,
+    CloseParenthesis,
+    Identifier,
+    StringLiteral,
+    NumberLiteral
+)
+
+class Lexer:
+    def __init__(self, buf: str):
+        self._buf: str = buf
+        self._pos: int = 0
+        self._tokens: List[Node] = []
+
+    def lex(self) -> None:
+        while True:
+            if self._is_eof():
+                break
+
+            if self._current() == '(':
+                self._match_open_parenthesis()
+                continue
+
+            if self._current() == ')':
+                self._match_close_parenthesis()
+                continue
+
+            if self._current() == '"':
+                self._match_string_literal()
+                continue
+
+            if self._is_digit():
+                self._match_number_literal()
+                continue
+
+            if self._current() == '.':
+                if self._peek() in string.digits:
+                    self._match_number_literal()
+                    continue
+
+            if self._is_identifier():
+                self._match_identifier()
+                continue
+
+            self._advance()
+
+    def tokens(self) -> List[Node]:
+        return self._tokens
+
+    def _is_eof(self) -> bool:
+        return self._pos >= len(self._buf)
+
+    def _current(self) -> str | None:
+        return None if self._is_eof() else self._buf[self._pos]
+
+    def _peek(self, depth: int = 1) -> str | None:
+        if self._pos + depth >= len(self._buf):
+            return None
+
+        return self._buf[self._pos + depth]
+
+    def _is_digit(self) -> bool:
+        return self._current() in string.digits
+
+    def _is_identifier(self) -> bool:
+        return self._current() in ''.join([
+            string.digits,
+            string.ascii_lowercase,
+            string.ascii_uppercase,
+            '!$%&*+-./:<=>?@^_~'
+        ])
+
+    def _advance(self) -> None:
+        self._pos += 1
+
+    def _match_open_parenthesis(self) -> None:
+        self._tokens.append(OpenParenthesis())
+        self._advance()
+
+    def _match_close_parenthesis(self) -> None:
+        self._tokens.append(CloseParenthesis())
+        self._advance()
+
+    def _match_string_literal(self) -> None:
+        start = self._current()
+
+        # if peeked next character is equal to dquote
+        # then advance bufptr by 2 and give empty string
+        # as a parameter for 'StringLiteral' constructor.
+        if self._peek() == start:
+            self._advance()
+            self._advance()
+            self._tokens.append(StringLiteral(''))
+            return None
+
+        self._advance()
+
+        buf, end = '', ''
+
+        while True:
+            if self._is_eof():
+                break
+
+            if self._current() == start:
+                end = self._current()
+                self._advance()
+                break
+
+            buf += self._current()
+            self._advance()
+
+        if end != start:
+            raise UnterminatedStringLiteralError('unterminated string literal')
+
+        self._tokens.append(StringLiteral(buf))
+
+    def _match_number_literal(self) -> None:
+        buf = self._current()
+        cdot = 0 if self._is_digit() else 1
+
+        self._advance()
+
+        while True:
+            if self._is_eof() or \
+                (not self._is_digit() and self._current() != '.'):
+                break
+
+            if self._current() == '.':
+                cdot += 1
+
+            buf += self._current()
+            self._advance()
+
+        if cdot > 1:
+            raise MalformedFloatingPointError('malformed floating-point number')
+
+        num = int(buf) if '.' not in buf else float(buf)
+
+        self._tokens.append(NumberLiteral(num))
+
+    def _match_identifier(self) -> None:
+        buf = self._current()
+
+        self._advance()
+
+        while True:
+            if self._is_eof() or not self._is_identifier():
+                break
+
+            buf += self._current()
+            self._advance()
+
+        self._tokens.append(Identifier(buf))
