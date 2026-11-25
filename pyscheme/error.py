@@ -3,3 +3,9 @@ class UnterminatedStringLiteralError(BaseException):
 
 class MalformedFloatingPointError(BaseException):
     pass
+
+class UnterminatedPipeScopedIdentifier(BaseException):
+    pass
+
+class MalformedHexadecimalEscape(BaseException):
+    pass

@@ -3,7 +3,9 @@ from typing import List
 
 from pyscheme.error import (
     MalformedFloatingPointError,
-    UnterminatedStringLiteralError
+    UnterminatedStringLiteralError,
+    UnterminatedPipeScopedIdentifier,
+    MalformedHexadecimalEscape
 )
 
 from pyscheme.node import (
@@ -12,7 +14,8 @@ from pyscheme.node import (
     CloseParenthesis,
     Identifier,
     StringLiteral,
-    NumberLiteral
+    NumberLiteral,
+    PipeScopedIdentifier
 )
 
 class Lexer:
@@ -40,6 +43,10 @@ class Lexer:
 
             if self._is_digit():
                 self._match_number_literal()
+                continue
+
+            if self._current() == '|':
+                self._match_pipe_scoped_identifier()
                 continue
 
             if self._current() == '.':
@@ -70,6 +77,9 @@ class Lexer:
 
     def _is_digit(self) -> bool:
         return self._current() in string.digits
+
+    def _is_hexdigit(self) -> bool:
+        return self._current() in string.hexdigits
 
     def _is_identifier(self) -> bool:
         return self._current() in ''.join([
@@ -160,3 +170,60 @@ class Lexer:
             self._advance()
 
         self._tokens.append(Identifier(buf))
+
+    def _match_pipe_scoped_identifier(self) -> None:
+        start = self._current()
+
+        if self._peek() == start:
+            self._advance()
+            self._advance()
+            self._tokens.append(PipeScopedIdentifier(''))
+            return None
+
+        self._advance()
+
+        buf, end, tmp = '', '', ''
+
+        while True:
+            if self._is_eof():
+                break
+
+            if self._current() == start:
+                end = self._current()
+                self._advance()
+                break
+
+            if self._current() == '\\' and self._peek() == 'x':
+                self._advance()
+                self._advance()
+
+                while True:
+                    if self._is_eof() or self._current() == ';':
+                        if self._current() == ';':
+                            self._advance()
+
+                        break
+
+                    tmp += self._current().lower()
+                    self._advance()
+
+                if self._peek(depth=-1) != ';':
+                    raise MalformedHexadecimalEscape(
+                        'every hex-escape must be terminated by \';\''
+                    )
+
+                try:
+                    buf += chr(int('0x' + tmp, 16))
+                except ValueError as e:
+                    raise MalformedHexadecimalEscape('malformed hexadecimal escape') from e
+
+                tmp = ''
+                continue
+
+            buf += self._current()
+            self._advance()
+
+        if end != start:
+            raise UnterminatedPipeScopedIdentifier('malformed pipe-scoped identifier')
+
+        self._tokens.append(PipeScopedIdentifier(buf))

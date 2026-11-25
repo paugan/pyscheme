@@ -6,6 +6,7 @@ CLOSE_PARENTHESIS = 2
 IDENTIFIER = 3
 STRING_LITERAL = 4
 NUMBER_LITERAL = 5
+PIPE_SCOPED_IDENTIFIER = 6
 
 class Node(ABC):
     def __init__(self, ntype: int, value: Any):
@@ -60,3 +61,11 @@ class NumberLiteral(Node):
     @override
     def __str__(self) -> str:
         return '(number literal)'
+
+class PipeScopedIdentifier(Node):
+    def __init__(self, value: str):
+        super().__init__(PIPE_SCOPED_IDENTIFIER, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(pipe-scoped identifier)'
