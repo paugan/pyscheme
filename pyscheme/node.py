@@ -7,6 +7,9 @@ IDENTIFIER = 3
 STRING_LITERAL = 4
 NUMBER_LITERAL = 5
 PIPE_SCOPED_IDENTIFIER = 6
+DIRECTIVE = 7
+LINE_COMMENT = 8
+BLOCK_COMMENT = 9
 
 class Node(ABC):
     def __init__(self, ntype: int, value: Any):
@@ -69,3 +72,27 @@ class PipeScopedIdentifier(Node):
     @override
     def __str__(self) -> str:
         return '(pipe-scoped identifier)'
+
+class Directive(Node):
+    def __init__(self, value: str):
+        super().__init__(DIRECTIVE, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(directive)'
+
+class LineComment(Node):
+    def __init__(self, value: str):
+        super().__init__(LINE_COMMENT, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(line comment)'
+
+class BlockComment(Node):
+    def __init__(self, value: str):
+        super().__init__(BLOCK_COMMENT, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(block comment)'

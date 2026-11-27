@@ -5,7 +5,8 @@ from pyscheme.error import (
     MalformedFloatingPointError,
     UnterminatedStringLiteralError,
     UnterminatedPipeScopedIdentifier,
-    MalformedHexadecimalEscape
+    MalformedHexadecimalEscape,
+    UnterminatedBlockCommentError,
 )
 
 from pyscheme.node import (
@@ -15,7 +16,10 @@ from pyscheme.node import (
     Identifier,
     StringLiteral,
     NumberLiteral,
-    PipeScopedIdentifier
+    PipeScopedIdentifier,
+    Directive,
+    LineComment,
+    BlockComment
 )
 
 class Lexer:
@@ -53,6 +57,22 @@ class Lexer:
                 if self._peek() in string.digits:
                     self._match_number_literal()
                     continue
+
+            if self._current() == '#':
+                if self._peek() == '!':
+                    self._advance()
+                    self._advance()
+                    self._match_directive()
+                    continue
+
+                if self._peek() == '|':
+                    self._match_block_comment()
+                    continue
+
+            if self._current() == ';':
+                self._advance()
+                self._match_line_comment()
+                continue
 
             if self._is_identifier():
                 self._match_identifier()
@@ -227,3 +247,66 @@ class Lexer:
             raise UnterminatedPipeScopedIdentifier('malformed pipe-scoped identifier')
 
         self._tokens.append(PipeScopedIdentifier(buf))
+
+    def _match_directive(self) -> None:
+        buf = self._current()
+
+        self._advance()
+
+        while True:
+            if self._is_eof() or self._current() == '\n':
+                break
+
+            buf += self._current()
+            self._advance()
+
+        self._tokens.append(Directive(buf))
+
+    def _match_line_comment(self) -> None:
+        buf = self._current()
+
+        self._advance()
+
+        while True:
+            if self._is_eof() or self._current() == '\n':
+                break
+
+            buf += self._current()
+            self._advance()
+
+        self._tokens.append(LineComment(buf))
+
+    def _match_block_comment(self) -> None:
+        start = self._current() + self._peek()
+
+        self._advance()
+        self._advance()
+
+        if self._is_eof():
+            raise UnterminatedBlockCommentError('unterminated block comment')
+
+        if self._current() == '|' and self._peek() == '#':
+            self._advance()
+            self._advance()
+            self._tokens.append(BlockComment())
+            return None
+
+        buf, end = '', ''
+
+        while True:
+            if self._is_eof():
+                break
+
+            if self._current() == '|' and self._peek() == '#':
+                end = '|#'
+                self._advance()
+                self._advance()
+                break
+
+            buf += self._current()
+            self._advance()
+
+        if end != '|#':
+            raise UnterminatedBlockCommentError('unterminated block comment')
+
+        self._tokens.append(BlockComment(buf))

@@ -9,3 +9,6 @@ class UnterminatedPipeScopedIdentifier(BaseException):
 
 class MalformedHexadecimalEscape(BaseException):
     pass
+
+class UnterminatedBlockCommentError(BaseException):
+    pass
