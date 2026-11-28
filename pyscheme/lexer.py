@@ -7,6 +7,7 @@ from pyscheme.error import (
     UnterminatedPipeScopedIdentifier,
     MalformedHexadecimalEscape,
     UnterminatedBlockCommentError,
+    InvalidCharacterConstantError
 )
 
 from pyscheme.node import (
@@ -19,7 +20,17 @@ from pyscheme.node import (
     PipeScopedIdentifier,
     Directive,
     LineComment,
-    BlockComment
+    BlockComment,
+    Apostrophe,
+    Backquote,
+    Comma,
+    Shell,
+    OpenSquareBrace,
+    CloseSquareBrace,
+    OpenCurlyBrace,
+    CloseCurlyBrace,
+    BooleanLiteral,
+    CharConst
 )
 
 class Lexer:
@@ -58,6 +69,12 @@ class Lexer:
                     self._match_number_literal()
                     continue
 
+            if self._current() == '+' or self._current() == '-':
+                if self._peek() in string.digits or \
+                    (self._peek() == '.' and self._peek(depth=2) in string.digits):
+                    self._match_number_literal()
+                    continue
+
             if self._current() == '#':
                 if self._peek() == '!':
                     self._advance()
@@ -69,9 +86,52 @@ class Lexer:
                     self._match_block_comment()
                     continue
 
+                if self._peek() == 't' or self._peek() == 'f':
+                    self._advance()
+                    self._match_boolean_literal()
+                    continue
+
+                if self._peek() == '\\':
+                    self._advance()
+                    self._advance()
+                    self._match_character_constant()
+                    continue
+
             if self._current() == ';':
                 self._advance()
                 self._match_line_comment()
+                continue
+
+            if self._current() == '\'':
+                self._match_apostrophe()
+                continue
+
+            if self._current() == '`':
+                self._match_backquote()
+                continue
+
+            if self._current() == ',':
+                self._match_comma()
+                continue
+
+            if self._current() == '@':
+                self._match_shell()
+                continue
+
+            if self._current() == '[':
+                self._match_open_square_brace()
+                continue
+
+            if self._current() == ']':
+                self._match_close_square_brace()
+                continue
+
+            if self._current() == '{':
+                self._match_open_curly_brace()
+                continue
+
+            if self._current() == '}':
+                self._match_close_curly_brace()
                 continue
 
             if self._is_identifier():
@@ -155,6 +215,16 @@ class Lexer:
 
     def _match_number_literal(self) -> None:
         buf = self._current()
+        neg, signed = False, False
+
+        if buf in ['+', '-']:
+            neg = True if buf == '-' else False
+            signed = True
+
+        if signed:
+            self._advance()
+            buf = self._current()
+
         cdot = 0 if self._is_digit() else 1
 
         self._advance()
@@ -175,7 +245,7 @@ class Lexer:
 
         num = int(buf) if '.' not in buf else float(buf)
 
-        self._tokens.append(NumberLiteral(num))
+        self._tokens.append(NumberLiteral(num if not neg else -num))
 
     def _match_identifier(self) -> None:
         buf = self._current()
@@ -310,3 +380,87 @@ class Lexer:
             raise UnterminatedBlockCommentError('unterminated block comment')
 
         self._tokens.append(BlockComment(buf))
+
+    def _match_apostrophe(self) -> None:
+        self._tokens.append(Apostrophe())
+        self._advance()
+
+    def _match_backquote(self) -> None:
+        self._tokens.append(Backquote())
+        self._advance()
+
+    def _match_comma(self) -> None:
+        self._tokens.append(Comma())
+        self._advance()
+
+    def _match_shell(self) -> None:
+        self._tokens.append(Shell())
+        self._advance()
+
+    def _match_open_square_brace(self) -> None:
+        self._tokens.append(OpenSquareBrace())
+        self._advance()
+
+    def _match_close_square_brace(self) -> None:
+        self._tokens.append(CloseSquareBrace())
+        self._advance()
+
+    def _match_open_curly_brace(self) -> None:
+        self._tokens.append(OpenCurlyBrace())
+        self._advance()
+
+    def _match_close_curly_brace(self) -> None:
+        self._tokens.append(CloseCurlyBrace())
+        self._advance()
+
+    def _match_boolean_literal(self) -> None:
+        self._tokens.append(BooleanLiteral(True if self._current() == 't' else False))
+        self._advance()
+
+    def _match_character_constant(self) -> None:
+        preserved = [
+            'alarm', 'backspace',
+            'delete', 'escape',
+            'newline', 'null',
+            'return', 'space',
+            'tab'
+        ]
+
+        preserved_map = {
+            'alarm': '\x07',
+            'backspace': '\x08',
+            'delete': '\x7f',
+            'escape': '\x1b',
+            'newline': '\x0a',
+            'null': '\x00',
+            'return': '\x0d',
+            'space': '\x20',
+            'tab': '\x09'
+        }
+
+        buf = self._current()
+
+        if buf == ' ' and self._peek(depth=-1) == '\\':
+            self._tokens.append(CharConst(buf))
+            self._advance()
+            return None
+
+        self._advance()
+
+        while True:
+            # its just a trivial hack to fix
+            # the character read boundary. need to
+            # just worked for now.
+            if self._is_eof() or \
+                self._current() in [' ', ')']:
+                break
+
+            buf += self._current()
+            self._advance()
+
+        if buf not in preserved and len(buf) > 1:
+            raise InvalidCharacterConstantError('invalid character constant')
+
+        buf = preserved_map[buf] if buf in preserved else buf
+
+        self._tokens.append(CharConst(buf))

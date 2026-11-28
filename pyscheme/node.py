@@ -10,6 +10,16 @@ PIPE_SCOPED_IDENTIFIER = 6
 DIRECTIVE = 7
 LINE_COMMENT = 8
 BLOCK_COMMENT = 9
+APOSTROPHE = 10
+BACKQUOTE = 11
+COMMA = 12
+SHELL = 13
+OPEN_SQUARE_BRACE = 14
+CLOSE_SQUARE_BRACE = 15
+OPEN_CURLY_BRACE = 16
+CLOSE_CURLY_BRACE = 17
+BOOLEAN_LITERAL = 18
+CHAR_CONST = 19
 
 class Node(ABC):
     def __init__(self, ntype: int, value: Any):
@@ -96,3 +106,83 @@ class BlockComment(Node):
     @override
     def __str__(self) -> str:
         return '(block comment)'
+
+class Apostrophe(Node):
+    def __init__(self):
+        super().__init__(APOSTROPHE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(apostrophe)'
+
+class Backquote(Node):
+    def __init__(self):
+        super().__init__(BACKQUOTE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(backquote)'
+
+class Comma(Node):
+    def __init__(self):
+        super().__init__(COMMA, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(comma)'
+
+class Shell(Node):
+    def __init__(self):
+        super().__init__(SHELL, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(shell)'
+
+class OpenSquareBrace(Node):
+    def __init__(self):
+        super().__init__(OPEN_SQUARE_BRACE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(open-square-brace)'
+
+class CloseSquareBrace(Node):
+    def __init__(self):
+        super().__init__(CLOSE_SQUARE_BRACE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(close-square-brace)'
+
+class OpenCurlyBrace(Node):
+    def __init__(self):
+        super().__init__(OPEN_CURLY_BRACE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(open-curly-brace)'
+
+class CloseCurlyBrace(Node):
+    def __init__(self):
+        super().__init__(CLOSE_CURLY_BRACE, None)
+
+    @override
+    def __str__(self) -> str:
+        return '(close-curly-brace)'
+
+class BooleanLiteral(Node):
+    def __init__(self, value: bool):
+        super().__init__(BOOLEAN_LITERAL, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(boolean literal)'
+
+class CharConst(Node):
+    def __init__(self, value: str):
+        super().__init__(CHAR_CONST, value)
+
+    @override
+    def __str__(self) -> str:
+        return '(char const)'

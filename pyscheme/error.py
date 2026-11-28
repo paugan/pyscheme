@@ -12,3 +12,6 @@ class MalformedHexadecimalEscape(BaseException):
 
 class UnterminatedBlockCommentError(BaseException):
     pass
+
+class InvalidCharacterConstantError(BaseException):
+    pass

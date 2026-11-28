@@ -11,7 +11,26 @@ lexer = Lexer('''
 
 #!no-fold-case
 
-(|two\\x20;words| 10 20 3.14159)''')
+(display 30)
+(display +30)
+(display -30)
+(display 3.14)
+(display +3.14)
+(display -3.14)
+(display .11)
+(display +.11)
+(display -.11)
+(display '(10 20 30))
+(display `('(10 20 30)))
+(display ,@(list 10 20 30))
+(display #t)
+(display #f)
+(display #\\C)
+(display #\\ )
+(display #\\alarm)
+(display #\\newline)
+(display #\\tab)
+''')
 
 lexer.lex()
 
